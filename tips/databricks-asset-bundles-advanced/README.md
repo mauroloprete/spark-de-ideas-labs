@@ -28,14 +28,15 @@ databricks --version
 
 ```bash
 # Autenticación OAuth (recomendado)
-databricks auth login --host https://community.cloud.databricks.com
+# Reemplazá la URL por la de tu workspace (la ves en la barra del browser cuando entrás)
+databricks auth login --host https://TU-WORKSPACE.cloud.databricks.com
 
 # Se abre el browser, autorizás, listo.
 # Verificar que funcione:
-databricks auth env --host https://community.cloud.databricks.com
+databricks auth env --host https://TU-WORKSPACE.cloud.databricks.com
 ```
 
-> Reemplazá la URL por la de tu workspace si es diferente.
+> La URL de tu workspace la encontrás en la barra del browser cuando entrás a Databricks Free Edition. Tiene el formato `https://dbc-XXXXXXX.cloud.databricks.com`.
 
 ## 3. Explorar el bundle
 
