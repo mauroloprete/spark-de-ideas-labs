@@ -7,7 +7,7 @@
 # MAGIC Acá vemos la diferencia entre funciones nativas de Spark, wrapper functions y UDFs,
 # MAGIC y por qué importa para el rendimiento.
 # MAGIC
-# MAGIC > Ejecutable en Databricks Community Edition.
+# MAGIC > Ejecutable en Databricks Free Edition.
 
 # COMMAND ----------
 

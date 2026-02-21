@@ -2,13 +2,13 @@
 
 Notebooks reproducibles del podcast [Spark de Ideas](https://open.spotify.com/show/20WqZma0iLDYbg9wAEfv0w).
 
-Cada episodio tiene su carpeta con notebooks que podés ejecutar en **Databricks Community Edition** (gratis).
+Cada episodio tiene su carpeta con notebooks que podés ejecutar en **Databricks Free Edition** (gratis).
 
 ## Cómo usarlos
 
-1. Creá una cuenta gratuita en [Databricks Community Edition](https://community.cloud.databricks.com/)
+1. Creá una cuenta gratuita en [Databricks Free Edition](https://community.cloud.databricks.com/)
 2. Importá los notebooks (`.py`) directamente desde GitHub o descargalos
-3. Ejecutalos en un cluster Community Edition
+3. Ejecutalos en un cluster Free Edition
 
 ## Episodios
 

@@ -7,7 +7,7 @@
 # MAGIC Acá vemos los fundamentos de Python que más se usan en Data Engineering:
 # MAGIC dataclasses, inmutabilidad, Pydantic y cuándo usar cada tipo de clase.
 # MAGIC
-# MAGIC > Ejecutable en Databricks Community Edition.
+# MAGIC > Ejecutable en Databricks Free Edition.
 
 # COMMAND ----------
 

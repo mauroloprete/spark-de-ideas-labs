@@ -12,8 +12,8 @@ Notebooks del episodio donde repasamos los fundamentos que más se usan en Data 
 
 ## Cómo ejecutar
 
-1. Importá los archivos `.py` en Databricks Community Edition
-2. Creá un cluster (se asigna automáticamente en Community Edition)
+1. Importá los archivos `.py` en Databricks Free Edition
+2. Creá un cluster (se asigna automáticamente en Free Edition)
 3. Ejecutá los notebooks en orden
 
 ## Links

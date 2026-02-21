@@ -6,7 +6,7 @@
 # MAGIC
 # MAGIC Acá practicamos window functions, CTEs y JOINs avanzados con datos de ejemplo.
 # MAGIC
-# MAGIC > Ejecutable en Databricks Community Edition.
+# MAGIC > Ejecutable en Databricks Free Edition.
 
 # COMMAND ----------
 
