@@ -15,6 +15,7 @@ Cada episodio tiene su carpeta con notebooks que podés ejecutar en **Databricks
 | Episodio | Tema | Notebooks |
 |----------|------|-----------|
 | [Si arrancara de cero](episodios/si-arrancara-de-cero/) | Python, SQL, Spark — qué priorizar | 3 notebooks |
+| [Databricks Asset Bundles](episodios/databricks-asset-bundles-advanced/) | DABs con CLI — validate, deploy, run, destroy | 1 notebook + bundle |
 
 ## Links
 

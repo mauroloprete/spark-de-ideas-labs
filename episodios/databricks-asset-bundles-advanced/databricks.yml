@@ -1,0 +1,68 @@
+bundle:
+  name: dab-lab
+
+# --- Variables ---
+# Simples y complejas — se pueden sobreescribir por target, CLI o env vars
+
+variables:
+  greeting:
+    description: "Mensaje que imprime el notebook"
+    default: "Hola desde Databricks Asset Bundles!"
+
+  environment:
+    description: "Nombre del ambiente"
+    default: dev
+
+  spark_config:
+    description: "Configuración de Spark reutilizable"
+    type: complex
+    default:
+      spark.databricks.delta.optimizeWrite.enabled: true
+      spark.databricks.delta.autoCompact.enabled: true
+
+# --- Sync ---
+# Controlá qué archivos se sincronizan al workspace
+
+sync:
+  include:
+    - "src/**/*.py"
+  exclude:
+    - "**/__pycache__"
+    - "**/.pytest_cache"
+
+# --- Recursos ---
+
+resources:
+  jobs:
+    hello_job:
+      name: "[${var.environment}] hello_dab_job"
+      tasks:
+        - task_key: run_notebook
+          notebook_task:
+            notebook_path: ./src/hello_bundle.py
+            source: WORKSPACE
+
+# --- Targets ---
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://community.cloud.databricks.com
+    presets:
+      tags:
+        environment: dev
+        lab: databricks-asset-bundles
+
+  prod:
+    mode: production
+    workspace:
+      host: https://community.cloud.databricks.com
+    variables:
+      environment: prod
+    presets:
+      name_prefix: ""
+      tags:
+        environment: production
+        lab: databricks-asset-bundles
