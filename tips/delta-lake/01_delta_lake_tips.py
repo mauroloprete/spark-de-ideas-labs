@@ -15,21 +15,21 @@
 # MAGIC ## 0. Setup — Crear datos de ejemplo
 # MAGIC
 # MAGIC Vamos a crear una tabla de transacciones para usar en todo el lab.
-# MAGIC Usamos `main.default` que viene disponible en Free Edition con Unity Catalog.
+# MAGIC Usamos `workspace.default` que viene disponible en Free Edition con Unity Catalog.
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Limpiar si ya existe de una corrida anterior
-# MAGIC DROP TABLE IF EXISTS main.default.lab_transacciones;
-# MAGIC DROP TABLE IF EXISTS main.default.lab_transacciones_zorder;
-# MAGIC DROP TABLE IF EXISTS main.default.lab_transacciones_debug;
+# MAGIC DROP TABLE IF EXISTS workspace.default.lab_transacciones;
+# MAGIC DROP TABLE IF EXISTS workspace.default.lab_transacciones_zorder;
+# MAGIC DROP TABLE IF EXISTS workspace.default.lab_transacciones_debug;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Tabla principal: transacciones con Liquid Clustering
-# MAGIC CREATE TABLE main.default.lab_transacciones (
+# MAGIC CREATE TABLE workspace.default.lab_transacciones (
 # MAGIC   tx_id BIGINT GENERATED ALWAYS AS IDENTITY,
 # MAGIC   fecha DATE,
 # MAGIC   usuario_id INT,
@@ -44,7 +44,7 @@
 
 # MAGIC %sql
 # MAGIC -- Insertar datos de ejemplo: transacciones de los ultimos dias
-# MAGIC INSERT INTO main.default.lab_transacciones (fecha, usuario_id, monto, categoria, estado)
+# MAGIC INSERT INTO workspace.default.lab_transacciones (fecha, usuario_id, monto, categoria, estado)
 # MAGIC VALUES
 # MAGIC   (current_date() - INTERVAL 5 DAYS, 1, 150.00, 'electronica', 'completada'),
 # MAGIC   (current_date() - INTERVAL 5 DAYS, 2, 89.50, 'ropa', 'completada'),
@@ -69,7 +69,7 @@
 
 # MAGIC %sql
 # MAGIC -- Verificar que los datos estan bien
-# MAGIC SELECT * FROM main.default.lab_transacciones ORDER BY fecha, usuario_id;
+# MAGIC SELECT * FROM workspace.default.lab_transacciones ORDER BY fecha, usuario_id;
 
 # COMMAND ----------
 
@@ -92,55 +92,59 @@
 
 # MAGIC %sql
 # MAGIC -- Verificar que Liquid Clustering esta activo
-# MAGIC DESCRIBE DETAIL main.default.lab_transacciones;
+# MAGIC DESCRIBE DETAIL workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Cambiar las columnas de clustering sin reescribir la tabla
 # MAGIC -- (esto con Z-ORDER no se puede hacer)
-# MAGIC ALTER TABLE main.default.lab_transacciones
+# MAGIC ALTER TABLE workspace.default.lab_transacciones
 # MAGIC CLUSTER BY (fecha, categoria);
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Verificar que cambio
-# MAGIC DESCRIBE DETAIL main.default.lab_transacciones;
+# MAGIC DESCRIBE DETAIL workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Volver al clustering original
-# MAGIC ALTER TABLE main.default.lab_transacciones
+# MAGIC ALTER TABLE workspace.default.lab_transacciones
 # MAGIC CLUSTER BY (fecha, usuario_id);
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Para comparar: crear una tabla SIN liquid clustering (forma clasica)
-# MAGIC CREATE TABLE main.default.lab_transacciones_zorder (
+# MAGIC -- Particionamos por fecha para poder usar OPTIMIZE WHERE despues
+# MAGIC CREATE TABLE workspace.default.lab_transacciones_zorder (
 # MAGIC   tx_id BIGINT,
-# MAGIC   fecha DATE,
 # MAGIC   usuario_id INT,
 # MAGIC   monto DECIMAL(10, 2),
 # MAGIC   categoria STRING,
-# MAGIC   estado STRING
+# MAGIC   estado STRING,
+# MAGIC   fecha DATE
 # MAGIC )
-# MAGIC USING DELTA;
+# MAGIC USING DELTA
+# MAGIC PARTITIONED BY (fecha);
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC INSERT INTO main.default.lab_transacciones_zorder
-# MAGIC SELECT * FROM main.default.lab_transacciones;
+# MAGIC INSERT INTO workspace.default.lab_transacciones_zorder
+# MAGIC SELECT tx_id, usuario_id, monto, categoria, estado, fecha
+# MAGIC FROM workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Con Z-ORDER, tenes que correr esto manualmente cada vez
-# MAGIC OPTIMIZE main.default.lab_transacciones_zorder
-# MAGIC ZORDER BY (fecha, usuario_id);
+# MAGIC -- Z-ORDER se aplica sobre columnas NO particionadas
+# MAGIC OPTIMIZE workspace.default.lab_transacciones_zorder
+# MAGIC ZORDER BY (usuario_id);
 
 # COMMAND ----------
 
@@ -157,34 +161,39 @@
 # MAGIC sin predicado reescribe **toda** la tabla. En tablas de TB, eso son horas de compute.
 # MAGIC
 # MAGIC Con un predicado `WHERE`, solo reescribe los archivos que matchean.
+# MAGIC
+# MAGIC **Importante**: Liquid Clustering + `OPTIMIZE` ya es incremental de por si
+# MAGIC (solo toca archivos no clusterizados). No necesitas `WHERE` con Liquid Clustering.
+# MAGIC El `WHERE` es util para tablas **sin** Liquid Clustering (ej: con Z-ORDER).
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- MAL: reescribe toda la tabla
-# MAGIC -- (en este lab no pasa nada, pero en produccion con TB de datos es carisimo)
-# MAGIC OPTIMIZE main.default.lab_transacciones;
+# MAGIC -- Con Liquid Clustering: OPTIMIZE corre incremental, sin WHERE
+# MAGIC -- Solo toca los archivos que todavia no estan bien clusterizados
+# MAGIC OPTIMIZE workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- BIEN: solo optimiza la particion de ayer
-# MAGIC -- Esto es mucho mas eficiente en tablas grandes
-# MAGIC OPTIMIZE main.default.lab_transacciones
+# MAGIC -- En tablas SIN Liquid Clustering, usas WHERE para ser eficiente
+# MAGIC -- Esto solo optimiza los archivos que matchean el predicado
+# MAGIC OPTIMIZE workspace.default.lab_transacciones_zorder
 # MAGIC WHERE fecha = current_date() - INTERVAL 1 DAY;
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- Revisar el historial: vas a ver las dos operaciones OPTIMIZE
-# MAGIC DESCRIBE HISTORY main.default.lab_transacciones LIMIT 5;
+# MAGIC -- Revisar el historial de la tabla con LC
+# MAGIC DESCRIBE HISTORY workspace.default.lab_transacciones LIMIT 5;
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Tip**: si usas Liquid Clustering, `OPTIMIZE` corre de forma incremental
-# MAGIC (solo toca archivos no clusterizados). Es seguro correrlo seguido porque
-# MAGIC no reescribe lo que ya esta bien.
+# MAGIC **Resumen de OPTIMIZE**:
+# MAGIC - Con **Liquid Clustering**: correr `OPTIMIZE` sin `WHERE`. Ya es incremental.
+# MAGIC - Sin Liquid Clustering: usar `OPTIMIZE ... WHERE` para no reescribir toda la tabla.
+# MAGIC - Es seguro correr OPTIMIZE seguido: no reescribe lo que ya esta bien.
 
 # COMMAND ----------
 
@@ -208,27 +217,27 @@
 
 # MAGIC %sql
 # MAGIC -- Ver los detalles de la tabla (incluyendo propiedades de retencion)
-# MAGIC DESCRIBE DETAIL main.default.lab_transacciones;
+# MAGIC DESCRIBE DETAIL workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Correr VACUUM con retencion de 168 horas (7 dias, el default)
 # MAGIC -- En un lab recien creado probablemente no borre nada, pero asi se usa
-# MAGIC VACUUM main.default.lab_transacciones RETAIN 168 HOURS;
+# MAGIC VACUUM workspace.default.lab_transacciones RETAIN 168 HOURS;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- DRY RUN: ver que archivos borraria sin borrar nada
-# MAGIC VACUUM main.default.lab_transacciones RETAIN 168 HOURS DRY RUN;
+# MAGIC VACUUM workspace.default.lab_transacciones RETAIN 168 HOURS DRY RUN;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Configurar la retencion del log (transaction log, NO los datos)
 # MAGIC -- Default es 30 dias. En produccion, ajusta segun tu ventana de time travel.
-# MAGIC ALTER TABLE main.default.lab_transacciones
+# MAGIC ALTER TABLE workspace.default.lab_transacciones
 # MAGIC SET TBLPROPERTIES (
 # MAGIC   delta.logRetentionDuration = 'interval 30 days',
 # MAGIC   delta.deletedFileRetentionDuration = 'interval 7 days'
@@ -238,14 +247,14 @@
 
 # MAGIC %sql
 # MAGIC -- Verificar las propiedades
-# MAGIC SHOW TBLPROPERTIES main.default.lab_transacciones;
+# MAGIC SHOW TBLPROPERTIES workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Ver el historial completo de operaciones
 # MAGIC -- Aca se ve cada commit al transaction log
-# MAGIC DESCRIBE HISTORY main.default.lab_transacciones;
+# MAGIC DESCRIBE HISTORY workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
@@ -270,21 +279,21 @@
 
 # MAGIC %sql
 # MAGIC -- Ver todas las versiones disponibles
-# MAGIC DESCRIBE HISTORY main.default.lab_transacciones;
+# MAGIC DESCRIBE HISTORY workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Consultar la version 0 (el estado inicial, antes de los INSERTs)
 # MAGIC -- Nota: version 0 es el CREATE TABLE, version 1 es el primer INSERT
-# MAGIC SELECT * FROM main.default.lab_transacciones VERSION AS OF 1
+# MAGIC SELECT * FROM workspace.default.lab_transacciones VERSION AS OF 1
 # MAGIC ORDER BY fecha, usuario_id;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Hacer un cambio para tener algo que restaurar
-# MAGIC UPDATE main.default.lab_transacciones
+# MAGIC UPDATE workspace.default.lab_transacciones
 # MAGIC SET estado = 'reembolsada'
 # MAGIC WHERE estado = 'cancelada';
 
@@ -292,14 +301,14 @@
 
 # MAGIC %sql
 # MAGIC -- Verificar el cambio
-# MAGIC SELECT * FROM main.default.lab_transacciones
+# MAGIC SELECT * FROM workspace.default.lab_transacciones
 # MAGIC WHERE estado = 'reembolsada';
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Ver que version se creo con el UPDATE
-# MAGIC DESCRIBE HISTORY main.default.lab_transacciones LIMIT 3;
+# MAGIC DESCRIBE HISTORY workspace.default.lab_transacciones LIMIT 3;
 
 # COMMAND ----------
 
@@ -307,14 +316,14 @@
 # MAGIC -- RESTORE: volver al estado antes del UPDATE
 # MAGIC -- Usa el numero de version anterior al UPDATE (revisalo en el DESCRIBE HISTORY de arriba)
 # MAGIC -- Aca asumimos que el UPDATE fue la version mas reciente
-# MAGIC RESTORE TABLE main.default.lab_transacciones TO VERSION AS OF 1;
+# MAGIC RESTORE TABLE workspace.default.lab_transacciones TO VERSION AS OF 1;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Verificar: ya no deberia haber filas con estado 'reembolsada'
 # MAGIC SELECT estado, count(*) as cantidad
-# MAGIC FROM main.default.lab_transacciones
+# MAGIC FROM workspace.default.lab_transacciones
 # MAGIC GROUP BY estado;
 
 # COMMAND ----------
@@ -322,14 +331,14 @@
 # MAGIC %sql
 # MAGIC -- SHALLOW CLONE: crear una copia liviana para debugging
 # MAGIC -- No copia los datos, solo referencia los archivos originales
-# MAGIC CREATE OR REPLACE TABLE main.default.lab_transacciones_debug
-# MAGIC SHALLOW CLONE main.default.lab_transacciones;
+# MAGIC CREATE OR REPLACE TABLE workspace.default.lab_transacciones_debug
+# MAGIC SHALLOW CLONE workspace.default.lab_transacciones;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- El clone tiene los mismos datos pero es independiente
-# MAGIC SELECT count(*) as filas_en_clone FROM main.default.lab_transacciones_debug;
+# MAGIC SELECT count(*) as filas_en_clone FROM workspace.default.lab_transacciones_debug;
 
 # COMMAND ----------
 
@@ -360,20 +369,23 @@
 
 # MAGIC %sql
 # MAGIC -- Activar Change Data Feed en la tabla
-# MAGIC ALTER TABLE main.default.lab_transacciones
+# MAGIC ALTER TABLE workspace.default.lab_transacciones
 # MAGIC SET TBLPROPERTIES (delta.enableChangeDataFeed = true);
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC -- Revisar la version actual (la necesitamos como punto de inicio para leer cambios)
-# MAGIC DESCRIBE HISTORY main.default.lab_transacciones LIMIT 3;
+# Guardamos la version actual — la necesitamos para leer los cambios despues
+cdf_start = spark.sql("""
+    DESCRIBE HISTORY workspace.default.lab_transacciones LIMIT 1
+""").select("version").first()[0]
+print(f"CDF activado en version: {cdf_start}")
+print("Los cambios a partir de la siguiente version se van a trackear.")
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Hacer un INSERT para generar cambios trackeados por CDF
-# MAGIC INSERT INTO main.default.lab_transacciones (fecha, usuario_id, monto, categoria, estado)
+# MAGIC INSERT INTO workspace.default.lab_transacciones (fecha, usuario_id, monto, categoria, estado)
 # MAGIC VALUES
 # MAGIC   (current_date(), 7, 999.99, 'electronica', 'completada'),
 # MAGIC   (current_date(), 8, 50.00, 'comida', 'pendiente');
@@ -382,7 +394,7 @@
 
 # MAGIC %sql
 # MAGIC -- Hacer un UPDATE para ver los preimage/postimage
-# MAGIC UPDATE main.default.lab_transacciones
+# MAGIC UPDATE workspace.default.lab_transacciones
 # MAGIC SET estado = 'cancelada', monto = 0.00
 # MAGIC WHERE usuario_id = 8 AND estado = 'pendiente';
 
@@ -390,44 +402,43 @@
 
 # MAGIC %sql
 # MAGIC -- Hacer un DELETE
-# MAGIC DELETE FROM main.default.lab_transacciones
+# MAGIC DELETE FROM workspace.default.lab_transacciones
 # MAGIC WHERE usuario_id = 7 AND monto = 999.99;
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC -- Leer el Change Data Feed
-# MAGIC -- Reemplaza el numero de version de inicio por el que viste en DESCRIBE HISTORY
-# MAGIC -- (la version donde activaste CDF o posterior)
-# MAGIC SELECT *
-# MAGIC FROM table_changes('main.default.lab_transacciones', 1)
-# MAGIC ORDER BY _commit_version, _change_type;
+# Leer el Change Data Feed usando la version que capturamos
+# Usamos cdf_start + 1 porque los cambios empiezan DESPUES de activar CDF
+df_cdf = spark.sql(f"""
+    SELECT *
+    FROM table_changes('workspace.default.lab_transacciones', {cdf_start + 1})
+    ORDER BY _commit_version, _change_type
+""")
+df_cdf.show(20, truncate=50)
 
 # COMMAND ----------
 
-# Tambien se puede leer con PySpark
+# Tambien se puede leer con la API de DataFrameReader
 df_changes = (
     spark.read.format("delta")
     .option("readChangeFeed", "true")
-    .option("startingVersion", 1)
-    .table("main.default.lab_transacciones")
+    .option("startingVersion", cdf_start + 1)
+    .table("workspace.default.lab_transacciones")
 )
 
-display(
-    df_changes
+(df_changes
     .select("tx_id", "usuario_id", "monto", "estado", "_change_type", "_commit_version")
     .orderBy("_commit_version", "_change_type")
-)
+    .show(20, truncate=50))
 
 # COMMAND ----------
 
 # Filtrar solo los updates (ver el antes y despues)
-display(
-    df_changes
+(df_changes
     .filter("_change_type IN ('update_preimage', 'update_postimage')")
     .select("tx_id", "usuario_id", "monto", "estado", "_change_type", "_commit_version")
     .orderBy("_commit_version", "tx_id", "_change_type")
-)
+    .show(truncate=50))
 
 # COMMAND ----------
 
@@ -446,9 +457,9 @@ display(
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC DROP TABLE IF EXISTS main.default.lab_transacciones;
-# MAGIC DROP TABLE IF EXISTS main.default.lab_transacciones_zorder;
-# MAGIC DROP TABLE IF EXISTS main.default.lab_transacciones_debug;
+# MAGIC DROP TABLE IF EXISTS workspace.default.lab_transacciones;
+# MAGIC DROP TABLE IF EXISTS workspace.default.lab_transacciones_zorder;
+# MAGIC DROP TABLE IF EXISTS workspace.default.lab_transacciones_debug;
 
 # COMMAND ----------
 

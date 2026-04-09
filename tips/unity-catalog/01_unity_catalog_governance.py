@@ -348,45 +348,29 @@
 
 # COMMAND ----------
 
-# Escribir un archivo CSV de ejemplo en el volume
-import csv
-
+# Escribir un CSV de ejemplo en el volume usando Spark
 volume_path = "/Volumes/lab_unity_catalog/bronze/landing_zone"
 
-# Crear un CSV de ejemplo con datos de productos
-data = [
-    ["product_id", "nombre", "categoria", "precio"],
-    [1, "Notebook Lenovo", "Tecnologia", 850.00],
-    [2, "Monitor 27 pulgadas", "Tecnologia", 420.00],
-    [3, "Silla Ergonomica", "Oficina", 350.00],
-    [4, "Teclado Mecanico", "Tecnologia", 120.00],
-    [5, "Escritorio Ajustable", "Oficina", 680.00],
+products_data = [
+    (1, "Notebook Lenovo", "Tecnologia", 850.00),
+    (2, "Monitor 27 pulgadas", "Tecnologia", 420.00),
+    (3, "Silla Ergonomica", "Oficina", 350.00),
+    (4, "Teclado Mecanico", "Tecnologia", 120.00),
+    (5, "Escritorio Ajustable", "Oficina", 680.00),
 ]
 
-output_file = f"{volume_path}/productos.csv"
-
-dbutils.fs.put(
-    output_file,
-    "\n".join([",".join(str(c) for c in row) for row in data]),
-    overwrite=True
-)
-
-print(f"Archivo creado en: {output_file}")
+df_products = spark.createDataFrame(products_data, ["product_id", "nombre", "categoria", "precio"])
+df_products.coalesce(1).write.mode("overwrite").option("header", "true").csv(f"{volume_path}/productos")
+print(f"CSV escrito en: {volume_path}/productos/")
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC -- Listar archivos en el volume
-# MAGIC LIST '/Volumes/lab_unity_catalog/bronze/landing_zone/';
-
-# COMMAND ----------
-
-# Leer el CSV desde el volume usando Spark
+# Leer el CSV desde el volume
 df_productos = (
     spark.read
     .option("header", "true")
     .option("inferSchema", "true")
-    .csv("/Volumes/lab_unity_catalog/bronze/landing_zone/productos.csv")
+    .csv(f"{volume_path}/productos")
 )
 
 df_productos.show()

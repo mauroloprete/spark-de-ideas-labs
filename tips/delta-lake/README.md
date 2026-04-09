@@ -36,7 +36,7 @@ delta-lake/
 
 ## Notas
 
-- El notebook usa el esquema `main.default` que viene disponible en Free Edition con Unity Catalog
+- El notebook usa el esquema `workspace.default` que viene disponible en Free Edition con Unity Catalog
 - Al final del notebook hay un paso de cleanup que borra todas las tablas creadas
 - Si alguna celda falla por permisos, verifica que tu cluster tenga Unity Catalog habilitado
 

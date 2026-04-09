@@ -169,7 +169,7 @@ for k, v in sorted(logged_run.data.metrics.items()):
 
 # COMMAND ----------
 
-MODEL_NAME = "main.default.lab_iris_model"
+MODEL_NAME = "workspace.default.lab_iris_model"
 
 # Registrar el modelo desde el run que acabamos de hacer
 model_uri = f"runs:/{run_id}/model"

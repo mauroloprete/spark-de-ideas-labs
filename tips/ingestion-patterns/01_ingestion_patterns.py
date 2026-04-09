@@ -24,10 +24,12 @@
 # COMMAND ----------
 
 # Configuracion del lab
-CATALOG = "main"
+CATALOG = "workspace"
 SCHEMA = "ingestion_patterns_lab"
 
-spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{SCHEMA}")
+# Limpiar schema si existe de una corrida anterior (para que sea re-ejecutable)
+spark.sql(f"DROP SCHEMA IF EXISTS {CATALOG}.{SCHEMA} CASCADE")
+spark.sql(f"CREATE SCHEMA {CATALOG}.{SCHEMA}")
 spark.sql(f"USE CATALOG {CATALOG}")
 spark.sql(f"USE SCHEMA {SCHEMA}")
 
@@ -279,6 +281,7 @@ spark.table("watermark_control").show(truncate=False)
 # COMMAND ----------
 
 # Simular nuevas ordenes que llegan al sistema fuente
+# Usamos el schema de la tabla fuente para evitar conflictos de tipos
 new_orders = spark.createDataFrame(
     [
         (51, 1, 1500.00, "COMPLETED",
@@ -288,7 +291,7 @@ new_orders = spark.createDataFrame(
         (53, 5, 2200.00, "SHIPPED",
          datetime(2025, 6, 15, 14, 0, 0), datetime(2025, 6, 15, 14, 0, 0)),
     ],
-    ["order_id", "customer_id", "amount", "status", "created_at", "updated_at"]
+    spark.table("source_orders").schema
 )
 
 new_orders.write.format("delta").mode("append").saveAsTable("source_orders")
@@ -597,10 +600,12 @@ print(f"Reduccion: {num_files_before} -> {num_files_after} archivos")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- Compactar solo eventos de un tipo especifico
-# MAGIC -- (en produccion usarias WHERE event_date = current_date() - INTERVAL 1 DAY)
+# MAGIC -- En produccion, si la tabla esta particionada por fecha, compactarias asi:
+# MAGIC -- OPTIMIZE mi_tabla WHERE event_date = current_date() - INTERVAL 1 DAY
+# MAGIC --
+# MAGIC -- Nuestra tabla no esta particionada, asi que compactamos todo
+# MAGIC -- (en tablas chicas como esta, no hay diferencia)
 # MAGIC OPTIMIZE bronze_events_microbatch
-# MAGIC WHERE event_type = 'purchase'
 
 # COMMAND ----------
 

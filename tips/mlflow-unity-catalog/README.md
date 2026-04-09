@@ -33,7 +33,7 @@ mlflow-unity-catalog/
 | Setup | Configura MLflow para usar Unity Catalog como registry |
 | Experimento | Crea un experimento para agrupar runs |
 | Autolog | Entrena un RandomForest y captura params/metricas/modelo automaticamente |
-| Registro en UC | Registra el modelo con nombre de tres niveles (`main.default.lab_iris_model`) |
+| Registro en UC | Registra el modelo con nombre de tres niveles (`workspace.default.lab_iris_model`) |
 | Aliases | Asigna alias `champion` en vez de los stages fijos del registry viejo |
 | Lineage | Loguea datasets de entrada para crear lineage datos-a-modelo |
 | Inferencia | Carga el modelo por alias y predice sobre datos nuevos |
