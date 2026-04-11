@@ -33,12 +33,14 @@ from sklearn.metrics import accuracy_score
 import pandas as pd
 import numpy as np
 
-# Configurar Unity Catalog como registry de modelos
+# Configurar MLflow para usar Databricks como tracking server y Unity Catalog como registry
+mlflow.set_tracking_uri("databricks")
 mlflow.set_registry_uri("databricks-uc")
 
 client = MlflowClient()
 
 print(f"MLflow version: {mlflow.__version__}")
+print(f"Tracking URI: {mlflow.get_tracking_uri()}")
 print(f"Registry URI: {mlflow.get_registry_uri()}")
 
 # COMMAND ----------
@@ -239,7 +241,9 @@ print(f"Version del champion: {version_info.version}")
 # Crear un nuevo run que loguee el input dataset explicitamente
 with mlflow.start_run(run_name="rf_iris_con_lineage") as run_lineage:
     # Crear dataset de MLflow a partir del DataFrame de pandas
-    dataset = mlflow.data.from_pandas(X_train, targets=y_train.values, name="iris_train")
+    train_with_target = X_train.copy()
+    train_with_target["target"] = y_train.values
+    dataset = mlflow.data.from_pandas(train_with_target, targets="target", name="iris_train")
 
     # Loguear el dataset — esto crea el lineage
     mlflow.log_input(dataset, context="training")
