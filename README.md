@@ -20,11 +20,18 @@ Cada lab tiene su carpeta con notebooks que podés ejecutar en **Databricks Free
 
 | # | Lab | Tema | Blog post |
 |---|-----|------|-----------|
-| 1 | [Databricks Asset Bundles](tips/databricks-asset-bundles-advanced/) | DABs con CLI — validate, deploy, run, destroy | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-asset-bundles-advanced/) |
-| 2 | [Delta Lake](tips/delta-lake/) | Liquid Clustering, OPTIMIZE, VACUUM, Time Travel, CDF | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-01-delta-lake/) |
-| 3 | [Unity Catalog](tips/unity-catalog/) | Namespace, GRANTS, row/column security, Volumes, lineage | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-02-unity-catalog/) |
-| 4 | [Structured Streaming](tips/structured-streaming/) | Triggers, Auto Loader, foreachBatch + MERGE, monitoreo | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-03-structured-streaming/) |
-| 5 | [MLflow + Unity Catalog](tips/mlflow-unity-catalog/) | Experimentos, registro en UC, aliases, lineage | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-04-mlflow-unity-catalog/) |
+| 1 | [Delta Lake](tips/delta-lake/) | Liquid Clustering, OPTIMIZE, VACUUM, Time Travel, CDF | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-01-delta-lake/) |
+| 2 | [Unity Catalog](tips/unity-catalog/) | Namespace, GRANTS, row/column security, Volumes, lineage | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-02-unity-catalog/) |
+| 3 | [Structured Streaming](tips/structured-streaming/) | Triggers, Auto Loader, foreachBatch + MERGE, monitoreo | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-03-structured-streaming/) |
+| 4 | [MLflow + Unity Catalog](tips/mlflow-unity-catalog/) | Experimentos, registro en UC, aliases, lineage | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-04-mlflow-unity-catalog/) |
+| 7 | [Docker Containers](tips/docker-containers/) | Contenedores custom en Databricks — Dockerfile, init scripts, API | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-06-docker-containers/) |
+| 8 | [Jobs & Workflows](tips/jobs-workflows/) | Jobs, triggers, streaming tasks, orchestration | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-08-jobs-workflows/) |
+
+## Databricks Asset Bundles
+
+| Lab | Tema | Blog post |
+|-----|------|-----------|
+| [DABs Advanced](tips/databricks-asset-bundles-advanced/) | DABs con CLI — validate, deploy, run, destroy | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-asset-bundles-advanced/) |
 
 ## Patrones de Data Engineering
 
