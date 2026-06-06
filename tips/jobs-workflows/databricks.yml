@@ -1,0 +1,98 @@
+bundle:
+  name: jobs-workflows-lab
+
+sync:
+  include:
+    - "src/**/*.py"
+  exclude:
+    - "**/__pycache__"
+
+variables:
+  environment:
+    description: "Nombre del ambiente"
+    default: dev
+
+  catalog:
+    description: "Catalogo de Unity Catalog"
+    default: dev_bronze
+
+  schema:
+    description: "Schema para las tablas del lab"
+    default: labs
+
+resources:
+  jobs:
+    # Job 0: setup — crea schema, volume y tabla bronze para los triggers
+    setup_resources:
+      name: "[${var.environment}] lab_setup_resources"
+      tasks:
+        - task_key: setup
+          notebook_task:
+            notebook_path: ./src/00_setup_resources.py
+            source: WORKSPACE
+
+    # Job 1: se ejecuta manualmente o con bundle run (para correr los labs)
+    autoloader_file_arrival:
+      name: "[${var.environment}] lab_autoloader_file_arrival"
+      tasks:
+        - task_key: autoloader
+          notebook_task:
+            notebook_path: ./src/01_autoloader_file_arrival.py
+            source: WORKSPACE
+            base_parameters:
+              cleanup: "false"
+
+    microbatch_table_update:
+      name: "[${var.environment}] lab_microbatch_table_update"
+      tasks:
+        - task_key: microbatch
+          notebook_task:
+            notebook_path: ./src/02_microbatch_table_update.py
+            source: WORKSPACE
+            base_parameters:
+              cleanup: "false"
+
+    # Job 3: AutoLoader con file arrival trigger en Volume
+    autoloader_with_file_trigger:
+      name: "[${var.environment}] lab_autoloader_file_trigger"
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ./src/01_autoloader_file_arrival.py
+            source: WORKSPACE
+            base_parameters:
+              cleanup: "false"
+      trigger:
+        pause_status: UNPAUSED
+        file_arrival:
+          url: /Volumes/${var.catalog}/${var.schema}/lab_bronze_vol/clientes/
+          min_time_between_triggers_seconds: 60
+          wait_after_last_change_seconds: 120
+
+    # Job 4: Microbatch con table update trigger en tabla bronze
+    microbatch_with_table_trigger:
+      name: "[${var.environment}] lab_microbatch_table_trigger"
+      tasks:
+        - task_key: transform
+          notebook_task:
+            notebook_path: ./src/02_microbatch_table_update.py
+            source: WORKSPACE
+            base_parameters:
+              cleanup: "false"
+      trigger:
+        pause_status: UNPAUSED
+        table_update:
+          table_names:
+            - ${var.catalog}.${var.schema}.lab_clientes_bronze_cdf
+          condition: ANY_UPDATED
+          min_time_between_triggers_seconds: 60
+          wait_after_last_change_seconds: 120
+
+targets:
+  dev:
+    mode: development
+    default: true
+    presets:
+      tags:
+        environment: dev
+        lab: jobs-workflows
