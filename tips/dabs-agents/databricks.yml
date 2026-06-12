@@ -1,0 +1,111 @@
+bundle:
+  name: dabs-agents-lab
+
+sync:
+  include:
+    - "src/**/*.py"
+    - "app/**"
+  exclude:
+    - "**/__pycache__"
+
+# --- Variables ---
+
+variables:
+  environment:
+    description: "Nombre del ambiente"
+    default: dev
+
+  catalog:
+    description: "Catalogo de Unity Catalog"
+    default: dev_bronze
+
+  schema:
+    description: "Schema para los recursos del lab"
+    default: labs
+
+  vs_endpoint:
+    description: "Vector Search endpoint (debe existir)"
+    default: vs-endpoint
+
+# --- Recursos ---
+
+resources:
+  # Experiment de MLflow para tracking
+  experiments:
+    agent_experiment:
+      name: /Users/${workspace.current_user.userName}/dabs-agents-lab
+
+  # Serving endpoint con AI Gateway
+  # NOTA: descomentar despues de registrar el modelo (bundle run setup_lab)
+  # model_serving_endpoints:
+  #   agent_endpoint:
+  #     name: soporte-bot-${var.environment}
+  #     config:
+  #       served_entities:
+  #         - entity_name: ${var.catalog}.${var.schema}.soporte_bot
+  #           entity_version: "1"
+  #           workload_size: Small
+  #           scale_to_zero_enabled: true
+  #     ai_gateway:
+  #       rate_limits:
+  #         - key: user
+  #           renewal_period: minute
+  #           calls: 20
+  #       guardrails:
+  #         input:
+  #           pii:
+  #             behavior: BLOCK
+  #       inference_table_config:
+  #         catalog_name: ${var.catalog}
+  #         schema_name: ${var.schema}
+  #         table_name_prefix: soporte_bot_logs
+  #         enabled: true
+
+  # Job de setup: crea datos de ejemplo y registra el modelo
+  jobs:
+    setup_lab:
+      name: "[${var.environment}] dabs_agents_setup"
+      tasks:
+        - task_key: setup_data
+          notebook_task:
+            notebook_path: ./src/00_setup_data.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+
+        - task_key: register_agent
+          depends_on:
+            - task_key: setup_data
+          notebook_task:
+            notebook_path: ./src/01_agent.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+
+    # Job de refresh del vector index
+    refresh_index:
+      name: "[${var.environment}] dabs_agents_refresh_index"
+      tasks:
+        - task_key: refresh
+          notebook_task:
+            notebook_path: ./src/02_refresh_index.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: "America/Montevideo"
+
+# --- Targets ---
+
+targets:
+  dev:
+    mode: development
+    default: true
+    presets:
+      tags:
+        environment: dev
+        lab: dabs-agents

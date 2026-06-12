@@ -32,6 +32,7 @@ Cada lab tiene su carpeta con notebooks que podés ejecutar en **Databricks Free
 | Lab | Tema | Blog post |
 |-----|------|-----------|
 | [DABs Advanced](tips/databricks-asset-bundles-advanced/) | DABs con CLI — validate, deploy, run, destroy | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-asset-bundles-advanced/) |
+| [DABs + AI Agents](tips/dabs-agents/) | Deploy de un agente RAG completo con DABs: MLflow, serving, AI Gateway, jobs | [Slides](https://mauroloprete.github.io/mauroloprete/slides/databricks-meetup-dabs-agents/) |
 
 ## Patrones de Data Engineering
 
