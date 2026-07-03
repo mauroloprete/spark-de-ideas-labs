@@ -35,15 +35,14 @@ resources:
     agent_experiment:
       name: /Users/${workspace.current_user.userName}/dabs-agents-lab
 
-  # Serving endpoint con AI Gateway
-  # NOTA: descomentar despues de registrar el modelo (bundle run setup_lab)
+  # Serving endpoint con AI Gateway (se crea via CLI, bundle lo bindea despues)
   # model_serving_endpoints:
   #   agent_endpoint:
   #     name: soporte-bot-${var.environment}
   #     config:
   #       served_entities:
   #         - entity_name: ${var.catalog}.${var.schema}.soporte_bot
-  #           entity_version: "1"
+  #           entity_version: "3"
   #           workload_size: Small
   #           scale_to_zero_enabled: true
   #     ai_gateway:
@@ -51,15 +50,31 @@ resources:
   #         - key: user
   #           renewal_period: minute
   #           calls: 20
-  #       guardrails:
-  #         input:
-  #           pii:
-  #             behavior: BLOCK
-  #       inference_table_config:
-  #         catalog_name: ${var.catalog}
-  #         schema_name: ${var.schema}
-  #         table_name_prefix: soporte_bot_logs
-  #         enabled: true
+
+  # Lakebase — memoria persistente del agente
+  postgres_projects:
+    agent_memory:
+      project_id: soporte-bot-memory
+      display_name: "SoporteBot Memory Store"
+      pg_version: 17
+
+  postgres_branches:
+    dev_branch:
+      parent: ${resources.postgres_projects.agent_memory.id}
+      branch_id: dev-lab
+      no_expiry: true
+
+  # Databricks App — Chat UI (se habilita despues del endpoint)
+  # apps:
+  #   chat_ui:
+  #     name: soporte-bot-chat-${var.environment}
+  #     source_code_path: ./app
+  #     description: "SoporteBot — Chat UI para soporte tecnico"
+  #     resources:
+  #       - name: serving-endpoint
+  #         serving_endpoint:
+  #           name: ${resources.model_serving_endpoints.agent_endpoint.name}
+  #           permission: CAN_QUERY
 
   # Job de setup: crea datos de ejemplo y registra el modelo
   jobs:
@@ -108,4 +123,21 @@ targets:
     presets:
       tags:
         environment: dev
+        lab: dabs-agents
+
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405619081216020.0.azuredatabricks.net
+    variables:
+      environment: prod
+    run_as:
+      user_name: mauroloprete@mauroloprete558.onmicrosoft.com
+    permissions:
+      - user_name: mauroloprete@mauroloprete558.onmicrosoft.com
+        level: CAN_MANAGE
+    presets:
+      name_prefix: ""
+      tags:
+        environment: prod
         lab: dabs-agents

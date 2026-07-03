@@ -37,43 +37,49 @@ print(f"Modelo: {MODEL_NAME}")
 
 import mlflow
 from mlflow.models import infer_signature
+from mlflow.models.resources import DatabricksServingEndpoint
 import pandas as pd
 
-# Configurar el experiment del lab
-mlflow.set_experiment("/Shared/dabs-agents-lab/experiments")
+# Configurar el experiment del lab (usa el path del usuario actual)
+username = spark.sql("SELECT current_user()").first()[0]
+mlflow.set_experiment(f"/Users/{username}/dabs-agents-lab")
 
 # COMMAND ----------
 
 class SoporteBot(mlflow.pyfunc.PythonModel):
     """
     Agente RAG simplificado para soporte tecnico.
-    Busca en una tabla de documentos y genera respuestas usando Foundation Model APIs.
+    Usa mlflow.deployments para llamar a Foundation Model APIs (auth automatica en Model Serving).
+    Compatible con Model Serving (no usa PySpark ni Databricks SDK).
     """
+
+    # Documentos de soporte
+    DOCS = [
+        {"doc_id": "DOC-001", "title": "Como resetear la contrasena",
+         "content": "Para resetear tu contrasena, anda a Configuracion > Seguridad > Cambiar contrasena. Si no podes acceder, contacta al admin."},
+        {"doc_id": "DOC-002", "title": "Configurar VPN corporativa",
+         "content": "Descargar el cliente VPN desde el portal de IT (portal.internal/vpn). Credenciales: mismas que el Active Directory."},
+        {"doc_id": "DOC-003", "title": "Solicitar acceso a Databricks",
+         "content": "Levantar un ticket en ServiceNow con categoria Acceso a plataforma. Incluir nombre, equipo, proyecto, nivel de acceso."},
+    ]
 
     def load_context(self, context):
         """Se ejecuta una vez cuando el modelo se carga en el endpoint."""
-        from databricks.sdk import WorkspaceClient
-        self.w = WorkspaceClient()
+        from mlflow.deployments import get_deploy_client
+        self._deploy_client = get_deploy_client("databricks")
+        self._docs = list(self.DOCS)
 
-    def _search_docs(self, question: str, catalog: str, schema: str) -> str:
-        """Busca documentos relevantes en la tabla de soporte (busqueda simple por keywords)."""
+    def _search_docs(self, question: str) -> str:
+        """Busca documentos relevantes por keywords."""
         import re
-        from pyspark.sql import SparkSession
-
-        spark = SparkSession.getActiveSession()
-        if spark is None:
-            return "No se encontraron documentos relevantes."
-
-        # Busqueda simple por keywords (en produccion usarias Vector Search)
         keywords = re.findall(r'\w+', question.lower())
-        docs_df = spark.table(f"{catalog}.{schema}.soporte_docs").toPandas()
 
         scored = []
-        for _, row in docs_df.iterrows():
-            content_lower = (row["title"] + " " + row["content"]).lower()
-            score = sum(1 for kw in keywords if kw in content_lower)
+        for doc in self._docs:
+            text = (doc["title"] + " " + doc["content"]).lower()
+            score = sum(1 for kw in keywords if kw in text)
             if score > 0:
-                scored.append((score, row["title"], row["content"]))
+                scored.append((score, doc["title"], doc["content"]))
 
         scored.sort(reverse=True)
         top_docs = scored[:3]
@@ -81,10 +87,9 @@ class SoporteBot(mlflow.pyfunc.PythonModel):
         if not top_docs:
             return "No se encontraron documentos relevantes."
 
-        context = "\n\n".join(
+        return "\n\n".join(
             [f"## {title}\n{content}" for _, title, content in top_docs]
         )
-        return context
 
     def predict(self, context, model_input, params=None):
         """Recibe una pregunta y devuelve la respuesta del agente."""
@@ -94,11 +99,9 @@ class SoporteBot(mlflow.pyfunc.PythonModel):
             question = str(model_input)
 
         # 1. Buscar documentos relevantes
-        catalog = params.get("catalog", "dev_bronze") if params else "dev_bronze"
-        schema = params.get("schema", "labs") if params else "labs"
-        doc_context = self._search_docs(question, catalog, schema)
+        doc_context = self._search_docs(question)
 
-        # 2. Generar respuesta con Foundation Model API
+        # 2. Generar respuesta con Foundation Model API via mlflow.deployments
         prompt = f"""Sos un asistente de soporte tecnico. Responde la pregunta usando SOLO la informacion
 de los documentos proporcionados. Si no encontras la respuesta, deci que no tenes informacion.
 
@@ -109,13 +112,15 @@ PREGUNTA: {question}
 
 RESPUESTA:"""
 
-        response = self.w.serving_endpoints.query(
-            name="databricks-meta-llama-3-3-70b-instruct",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
+        response = self._deploy_client.predict(
+            endpoint="databricks-meta-llama-3-3-70b-instruct",
+            inputs={
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 500,
+            },
         )
 
-        return response.choices[0].message.content
+        return response["choices"][0]["message"]["content"]
 
 # COMMAND ----------
 
@@ -146,9 +151,11 @@ with mlflow.start_run(run_name="soporte-bot-v1") as run:
         signature=signature,
         input_example=input_example,
         pip_requirements=[
-            "databricks-sdk>=0.40.0",
             "mlflow>=2.18.0",
             "pandas",
+        ],
+        resources=[
+            DatabricksServingEndpoint(endpoint_name="databricks-meta-llama-3-3-70b-instruct"),
         ],
     )
 

@@ -26,6 +26,7 @@ Cada lab tiene su carpeta con notebooks que podés ejecutar en **Databricks Free
 | 4 | [MLflow + Unity Catalog](tips/mlflow-unity-catalog/) | Experimentos, registro en UC, aliases, lineage | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-04-mlflow-unity-catalog/) |
 | 7 | [Docker Containers](tips/docker-containers/) | Contenedores custom en Databricks — Dockerfile, init scripts, API | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-06-docker-containers/) |
 | 8 | [Jobs & Workflows](tips/jobs-workflows/) | Jobs, triggers, streaming tasks, orchestration | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-08-jobs-workflows/) |
+| 12 | [Photon](tips/photon/) | Benchmark con/sin Photon — runtime_engine, query plans, wall-clock | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-12-photon/) |
 
 ## Databricks Asset Bundles
 

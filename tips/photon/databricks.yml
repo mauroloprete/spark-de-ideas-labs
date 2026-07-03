@@ -1,0 +1,73 @@
+bundle:
+  name: photon-lab
+
+sync:
+  include:
+    - "src/**/*.py"
+  exclude:
+    - "**/__pycache__"
+
+variables:
+  environment:
+    description: "Nombre del ambiente"
+    default: dev
+
+  catalog:
+    description: "Catalogo de Unity Catalog"
+    default: dev_bronze
+
+  schema:
+    description: "Schema para las tablas del lab"
+    default: photon_bench
+
+  node_type:
+    description: "Node type para el benchmark (mismo con y sin Photon)"
+    default: Standard_D4s_v3
+
+  spark_version:
+    description: "DBR LTS para el benchmark"
+    default: 17.3.x-scala2.13
+
+resources:
+  jobs:
+    # Mismo notebook, mismo node type — la UNICA diferencia es runtime_engine
+    benchmark_standard:
+      name: "[${var.environment}] photon_lab_benchmark_standard"
+      tasks:
+        - task_key: benchmark
+          notebook_task:
+            notebook_path: ./src/01_photon_benchmark.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type}
+            num_workers: 1
+            runtime_engine: STANDARD
+
+    benchmark_photon:
+      name: "[${var.environment}] photon_lab_benchmark_photon"
+      tasks:
+        - task_key: benchmark
+          notebook_task:
+            notebook_path: ./src/01_photon_benchmark.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type}
+            num_workers: 1
+            runtime_engine: PHOTON
+
+targets:
+  dev:
+    mode: development
+    default: true
+    presets:
+      tags:
+        environment: dev
+        lab: photon
