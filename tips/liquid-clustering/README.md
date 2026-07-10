@@ -13,7 +13,8 @@ Corre en **Databricks Free Edition** (serverless, Photon siempre activo).
 1. Genera 200M de filas sintéticas en `<catalog>.<schema>.ventas_base` (idempotente). `cliente` tiene alta cardinalidad (50.000 valores).
 2. Crea las tres tablas con los tres layouts y corre `OPTIMIZE` (para Liquid, `OPTIMIZE FULL`).
 3. Reporta, por estrategia, el **total de archivos** (`DESCRIBE DETAIL`) y el **wall-clock** de la query filtrada.
-4. Documenta cómo sacar **files read / files pruned** de forma reproducible.
+4. Corre la misma query **100 veces por estrategia** (intercaladas, para que el caché afecte a las tres por igual) y reporta **mediana, p25/p75, mín y máx**, más las mediciones crudas (`timings_raw`) para analizarlas o graficarlas.
+5. Documenta cómo sacar **files read / files pruned** de forma reproducible.
 
 ## Cómo correrlo
 
@@ -23,7 +24,7 @@ databricks bundle deploy
 databricks bundle run liquid_clustering_benchmark
 ```
 
-Variables (`--var`): `catalog` (default `main`), `schema` (`liquid_clustering_lab`), `rows` (`200000000`).
+Variables (`--var`): `catalog` (default `main`), `schema` (`liquid_clustering_lab`), `rows` (`200000000`), `bench_runs` (`100`).
 
 ## Cómo se sacan los resultados (reproducible)
 
@@ -51,6 +52,16 @@ databricks api get /api/2.0/sql/history/queries \
 | Z-ORDER (cliente, fecha) | 36 | 1 | 35 | 20 MB |
 | Liquid Clustering (cliente, fecha) | 36 | 1 | 35 | 15 MB |
 
-La query filtra por `cliente` **y** `fecha`. El particionado poda por fecha (de 600 baja a 30 archivos) pero no puede podar por `cliente`, así que los lee enteros. Z-ORDER y Liquid podan por las dos y bajan a 1 archivo.
+La query filtra por `cliente` **y** `fecha`. El particionado saltea archivos por fecha (de 600 baja a 30) pero no puede saltear por `cliente`, así que los lee enteros. Z-ORDER y Liquid saltean por las dos y bajan a 1 archivo.
+
+### 100 corridas por estrategia (wall-clock, caché caliente)
+
+| Estrategia | Mediana | p25–p75 | Mín | Máx |
+|---|---|---|---|---|
+| Particionado por fecha | 0.705 s | 0.662–0.734 s | 0.611 s | 1.02 s |
+| Z-ORDER (cliente, fecha) | 0.645 s | 0.611–0.688 s | 0.556 s | 0.878 s |
+| Liquid Clustering (cliente, fecha) | 0.654 s | 0.615–0.698 s | 0.573 s | 0.809 s |
+
+Con el caché caliente las tres convergen: Z-ORDER y Liquid empatan y el particionado queda ~8% más lento. El layout paga en la primera lectura (scan frío) y en los bytes movidos, no en la query repetida.
 
 Post completo: https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-14-liquid-clustering/

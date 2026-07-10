@@ -17,10 +17,12 @@
 dbutils.widgets.text("catalog", "main")
 dbutils.widgets.text("schema", "liquid_clustering_lab")
 dbutils.widgets.text("rows", "200000000")
+dbutils.widgets.text("bench_runs", "100")
 
 catalog = dbutils.widgets.get("catalog")
 schema = dbutils.widgets.get("schema")
 rows = int(dbutils.widgets.get("rows"))
+bench_runs = int(dbutils.widgets.get("bench_runs"))
 
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{schema}")
 spark.sql(f"USE {catalog}.{schema}")
@@ -101,6 +103,49 @@ for key, t in [("particionado", "ventas_part"), ("zorder", "ventas_zorder"), ("l
                     "wallclock_s_min": wallclock(t)}
 
 print(json.dumps(results, indent=2))
+
+# COMMAND ----------
+
+# MAGIC %md ## 3.5. 100 corridas por estrategia: mediana e IQR
+# MAGIC
+# MAGIC Una corrida es una anécdota, no una medición. Corremos `bench_runs` veces la misma query
+# MAGIC sobre cada tabla, **intercaladas** (ronda a ronda, para que el estado del cluster y el caché
+# MAGIC afecten a las tres por igual), y reportamos mediana y rango intercuartílico del wall-clock.
+# MAGIC Con el caché caliente las diferencias se achican: el layout pesa más en la primera lectura.
+
+# COMMAND ----------
+
+import statistics
+
+def q(t):
+    t0 = time.time()
+    spark.sql(QUERY.format(t=t)).collect()
+    return time.time() - t0
+
+TABLES = {"particionado": "ventas_part", "zorder": "ventas_zorder", "liquid": "ventas_liquid"}
+timings = {k: [] for k in TABLES}
+
+for i in range(bench_runs):
+    for k, t in TABLES.items():   # intercaladas: part, zorder, liquid, part, ...
+        timings[k].append(q(t))
+
+corridas = {}
+for k, ts in timings.items():
+    qs = statistics.quantiles(ts, n=4)
+    corridas[k] = {
+        "n": len(ts),
+        "mediana_s": round(statistics.median(ts), 3),
+        "p25_s": round(qs[0], 3),
+        "p75_s": round(qs[2], 3),
+        "min_s": round(min(ts), 3),
+        "max_s": round(max(ts), 3),
+    }
+print(json.dumps(corridas, indent=2))
+
+# Además del resumen, se devuelven las mediciones crudas (timings_raw)
+# para poder analizarlas o graficarlas con la herramienta que prefieras.
+results["corridas"] = corridas
+results["timings_raw"] = {k: [round(x, 3) for x in ts] for k, ts in timings.items()}
 
 # COMMAND ----------
 
