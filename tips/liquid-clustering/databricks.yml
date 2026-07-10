@@ -1,0 +1,50 @@
+bundle:
+  name: liquid-clustering-lab
+
+sync:
+  include:
+    - "src/**/*.py"
+    - "src/**/*.sql"
+  exclude:
+    - "**/__pycache__"
+
+variables:
+  environment:
+    description: "Nombre del ambiente"
+    default: dev
+
+  catalog:
+    description: "Catalogo de Unity Catalog"
+    default: main
+
+  schema:
+    description: "Schema para las tablas del lab"
+    default: liquid_clustering_lab
+
+  rows:
+    description: "Filas del dataset sintetico"
+    default: "200000000"
+
+resources:
+  jobs:
+    # Job serverless: sin new_cluster => corre en Free Edition (Photon siempre activo)
+    liquid_clustering_benchmark:
+      name: "[${var.environment}] liquid_clustering_benchmark"
+      tasks:
+        - task_key: benchmark
+          notebook_task:
+            notebook_path: ./src/01_liquid_clustering_benchmark.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              rows: ${var.rows}
+
+targets:
+  dev:
+    mode: development
+    default: true
+    presets:
+      tags:
+        environment: dev
+        lab: liquid-clustering
