@@ -14,7 +14,8 @@ Corre en **Databricks Free Edition** (serverless, Photon siempre activo).
 2. Crea las tres tablas con los tres layouts y corre `OPTIMIZE` (para Liquid, `OPTIMIZE FULL`).
 3. Reporta, por estrategia, el **total de archivos** (`DESCRIBE DETAIL`) y el **wall-clock** de la query filtrada.
 4. Corre la misma query **100 veces por estrategia** (intercaladas, para que el caché afecte a las tres por igual) y reporta **mediana, p25/p75, mín y máx**, más las mediciones crudas (`timings_raw`) para analizarlas o graficarlas.
-5. Documenta cómo sacar **files read / files pruned** de forma reproducible.
+5. Mide la **escritura**: appendea el mismo lote nuevo (5% de la tabla) a las tres y corre el mantenimiento de cada una, capturando archivos creados y MB reescritos de `DESCRIBE HISTORY`.
+6. Documenta cómo sacar **files read / files pruned** de forma reproducible.
 
 ## Cómo correrlo
 
@@ -63,5 +64,15 @@ La query filtra por `cliente` **y** `fecha`. El particionado saltea archivos por
 | Liquid Clustering (cliente, fecha) | 0.654 s | 0.615–0.698 s | 0.573 s | 0.809 s |
 
 Con el caché caliente las tres convergen: Z-ORDER y Liquid empatan y el particionado queda ~8% más lento. El layout paga en la primera lectura (scan frío) y en los bytes movidos, no en la query repetida.
+
+### Escritura: append de un lote nuevo (10M filas) + mantenimiento
+
+| Estrategia | Append | Archivos creados | Mantenimiento | MB reescritos |
+|---|---|---|---|---|
+| Particionado por fecha | 18.5 s | 600 | `OPTIMIZE` · 40.8 s | 1,593 MB |
+| Z-ORDER (cliente, fecha) | 2.5 s | 2 | `OPTIMIZE ZORDER` · 29.3 s | 2,288 MB (la tabla entera) |
+| Liquid Clustering (cliente, fecha) | 1.9 s | 2 | `OPTIMIZE` · 4.8 s | 0 MB |
+
+El particionado fragmenta el append (600 archivos chicos); Z-ORDER reescribe la tabla completa para incorporar 113 MB nuevos (write amplification); el `OPTIMIZE` incremental de Liquid no reescribió nada.
 
 Post completo: https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-14-liquid-clustering/

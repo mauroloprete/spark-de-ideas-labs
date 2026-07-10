@@ -25,6 +25,10 @@ variables:
     description: "Filas del dataset sintetico"
     default: "200000000"
 
+  bench_runs:
+    description: "Corridas por estrategia para el benchmark de lectura"
+    default: "100"
+
 resources:
   jobs:
     # Job serverless: sin new_cluster => corre en Free Edition (Photon siempre activo)
@@ -39,6 +43,7 @@ resources:
               catalog: ${var.catalog}
               schema: ${var.schema}
               rows: ${var.rows}
+              bench_runs: ${var.bench_runs}
 
 targets:
   dev:

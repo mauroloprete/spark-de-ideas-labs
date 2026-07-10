@@ -190,4 +190,62 @@ except Exception as e:
 
 # COMMAND ----------
 
+# MAGIC %md ## 5. Escritura: qué cuesta un append y el mantenimiento que sigue
+# MAGIC
+# MAGIC Todo lo anterior mide **lectura**. Acá medimos el otro lado: llega un lote nuevo (5% de la tabla)
+# MAGIC y hay que (a) escribirlo y (b) mantener el orden de cada estrategia. La diferencia estructural:
+# MAGIC `OPTIMIZE ZORDER` no es incremental (reescribe de más), el `OPTIMIZE` de Liquid sí.
+# MAGIC El particionado paga distinto: el append se fragmenta en una carpeta por fecha (small files).
+# MAGIC Métricas reales de Delta vía `DESCRIBE HISTORY` (archivos creados, bytes reescritos).
+
+# COMMAND ----------
+
+def last_op_metrics(t):
+    r = spark.sql(f"DESCRIBE HISTORY {t} LIMIT 1").select("operation", "operationMetrics").collect()[0]
+    return dict(r["operationMetrics"])
+
+# Lote nuevo: 5% del tamaño de la tabla, misma distribución (se escribe una sola vez y
+# se inserta el MISMO lote en las tres tablas, para que la comparación sea justa)
+n_lote = rows // 20
+spark.sql("DROP TABLE IF EXISTS ventas_lote")
+(spark.range(0, n_lote)
+    .withColumn("cliente", (F.rand(seed=11) * 50000).cast("int"))
+    .withColumn("fecha", F.expr("date_add('2024-01-01', cast(rand(12)*600 as int))"))
+    .withColumn("monto", (F.rand(seed=13) * 1000))
+    .write.saveAsTable("ventas_lote"))
+
+escritura = {"filas_lote": n_lote}
+for k, t in TABLES.items():
+    # (a) append del mismo lote
+    t0 = time.time()
+    spark.sql(f"INSERT INTO {t} SELECT * FROM ventas_lote")
+    t_append = round(time.time() - t0, 2)
+    m = last_op_metrics(t)
+    append_metrics = {
+        "segundos": t_append,
+        "archivos_creados": int(m.get("numFiles", 0)),
+        "mb_escritos": round(int(m.get("numOutputBytes", 0)) / 1024 / 1024, 1),
+    }
+
+    # (b) mantenimiento para restaurar el orden de cada estrategia
+    t0 = time.time()
+    if k == "zorder":
+        spark.sql(f"OPTIMIZE {t} ZORDER BY (cliente, fecha)")
+    else:
+        spark.sql(f"OPTIMIZE {t}")   # particionado: compactación; liquid: incremental
+    t_opt = round(time.time() - t0, 2)
+    m = last_op_metrics(t)
+    opt_metrics = {
+        "segundos": t_opt,
+        "archivos_reescritos": int(m.get("numRemovedFiles", 0)),
+        "archivos_nuevos": int(m.get("numAddedFiles", 0)),
+        "mb_reescritos": round(int(m.get("numRemovedBytes", 0)) / 1024 / 1024, 1),
+    }
+    escritura[k] = {"append": append_metrics, "mantenimiento": opt_metrics}
+
+results["escritura"] = escritura
+print(json.dumps(escritura, indent=2))
+
+# COMMAND ----------
+
 dbutils.notebook.exit(json.dumps(results))
