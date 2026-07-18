@@ -6,7 +6,7 @@ Post: [Databricks Tips #15: Query Federation](https://mauroloprete.github.io/mau
 
 ## Qué hace
 
-1. Crea un Postgres serverless gratis en [Neon](https://neon.tech) y lo llena con 5M de órdenes sintéticas (~300 MB, entra en el free tier).
+1. Crea un Postgres serverless gratis en [Neon](https://neon.com) y lo llena con 5M de órdenes sintéticas (~300 MB, entra en el free tier).
 2. Crea la `CONNECTION` y el `FOREIGN CATALOG` en Unity Catalog, con credenciales en un secret scope.
 3. Corre tres queries con `EXPLAIN FORMATTED` para ver el pushdown en acción: una que se empuja entera (filtro + agregado), una que no se empuja (`levenshtein`), y el truco del `AND` (pushdown parcial).
 
@@ -48,7 +48,7 @@ La verificación del final del seed tiene que devolver `5000000` filas y ~`300 M
 
 ## Paso 2 — Secretos en Databricks
 
-Las credenciales de Neon van a un secret scope, nunca en texto plano en el DDL:
+Las credenciales de Neon van a un secret scope (Databricks recomienda secrets en vez de texto plano para credenciales):
 
 ```bash
 databricks secrets create-scope lab-federation

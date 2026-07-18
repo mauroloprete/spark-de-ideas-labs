@@ -2,8 +2,8 @@
 -- Correr en un SQL Warehouse (Pro o Serverless, canal 2023.40+).
 -- Antes: guardar las credenciales de Neon en un secret scope (ver README, paso 3).
 
--- 1. La connection: host + credenciales. Los secretos van con secret(),
---    nunca en texto plano (quedan legibles en el DDL para siempre).
+-- 1. La connection: host + credenciales. Databricks recomienda
+--    pasar las credenciales con secret(), no como texto plano.
 --    Reemplazá <TU_HOST_NEON> por el host de tu proyecto
 --    (ej.: ep-xxxx-yyyy-pooler.c-2.us-east-1.aws.neon.tech)
 CREATE CONNECTION pg_operacional TYPE postgresql
