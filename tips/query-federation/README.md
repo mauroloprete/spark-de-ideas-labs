@@ -66,6 +66,8 @@ Corré [`src/queries.sql`](src/queries.sql) y mirá los planes. La línea clave 
 
 ### Resultados de referencia (serverless, canal 2025.x)
 
+Las salidas completas de `EXPLAIN FORMATTED` están en [`outputs/`](outputs/); abajo, los fragmentos clave.
+
 **Query A** (filtro + agregado): se empuja entera. Postgres agrega ~1,6M de filas y por el cable cruzan **3 filas**.
 
 ```
@@ -76,11 +78,11 @@ app    | 537022
 web    | 537022
 ```
 
-**Query B** (`levenshtein`): no hay traducción posible. La subquery remota viaja casi desnuda y Postgres devuelve **los 5M de filas** por un único stream hacia un solo executor; el warehouse filtra después con un `PhotonFilter` local.
+**Query B** (`levenshtein`): no hay traducción posible. La subquery remota viaja casi pelada y Postgres devuelve **los 5M de filas** por un único stream hacia un solo executor; el warehouse filtra después con un `PhotonFilter` local.
 
 ```
 (3) PhotonFilter
-    Arguments: (levenshtein(cliente#13548, cliente_42, None) <= 1)
+    Arguments: (levenshtein(cliente#13514, cliente_42, None) <= 1)
 
 External engine query: SELECT "order_id","cliente","canal","fecha","monto" FROM "public"."orders"  WHERE ("cliente" IS NOT NULL)
 ```

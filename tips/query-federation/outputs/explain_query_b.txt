@@ -1,0 +1,29 @@
+== Physical Plan ==
+PhotonResultStage (5)
++- PhotonColumnarToRow (4)
+   +- PhotonFilter (3)
+      +- PhotonRowToColumnar (2)
+         +- * Scan JDBC v1 Relation from v2 scan pg_ventas.public.orders (1)
+
+
+(1) Scan JDBC v1 Relation from v2 scan pg_ventas.public.orders [codegen id : 1]
+Output [5]: [order_id#13513, cliente#13514, canal#13515, fecha#13516, monto#13517]
+Arguments: [order_id#13513, cliente#13514, canal#13515, fecha#13516, monto#13517], [StructField(order_id,IntegerType,true), StructField(cliente,StringType,true), StructField(canal,StringType,true), StructField(fecha,DateType,true), StructField(monto,DecimalType(38,18),true)], PushedDownOperators(None,None,None,None,List(),ArraySeq(cliente IS NOT NULL),List(),Some(pg_ventas.public.orders)), JDBCRDD[707] at $anonfun$withExecutionPhase$1 at AttributionContext.scala:349, JDBC v1 Relation from v2 scan, `pg_ventas`.`public`.`orders`, Statistics(sizeInBytes=8.0 EiB, ColumnStat: N/A)
+External engine query: SELECT "order_id","cliente","canal","fecha","monto" FROM "public"."orders"  WHERE ("cliente" IS NOT NULL)
+
+(2) PhotonRowToColumnar
+Input [5]: [order_id#13513, cliente#13514, canal#13515, fecha#13516, monto#13517]
+
+(3) PhotonFilter
+Input [5]: [order_id#13513, cliente#13514, canal#13515, fecha#13516, monto#13517]
+Arguments: (levenshtein(cliente#13514, cliente_42, None) <= 1)
+
+(4) PhotonColumnarToRow
+Input [5]: [order_id#13513, cliente#13514, canal#13515, fecha#13516, monto#13517]
+
+(5) PhotonResultStage
+Input [5]: [order_id#13513, cliente#13514, canal#13515, fecha#13516, monto#13517]
+
+
+== Photon Explanation ==
+The query is fully supported by Photon.

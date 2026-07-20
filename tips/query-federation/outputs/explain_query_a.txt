@@ -1,0 +1,29 @@
+== Physical Plan ==
+PhotonResultStage (5)
++- PhotonColumnarToRow (4)
+   +- PhotonProject (3)
+      +- PhotonRowToColumnar (2)
+         +- * Scan JDBC v1 Relation from v2 scan pg_ventas.public.orders (1)
+
+
+(1) Scan JDBC v1 Relation from v2 scan pg_ventas.public.orders [codegen id : 1]
+Output [2]: [canal#13500, count#13501L]
+Arguments: [canal#13500, count#13501L], [StructField(canal,StringType,true), StructField(count,LongType,true)], PushedDownOperators(Some(org.apache.spark.sql.connector.expressions.aggregate.Aggregation@248ae007),None,None,None,List(),ArraySeq(fecha IS NOT NULL, fecha >= 20454),List(),Some(pg_ventas.public.orders)), JDBCRDD[706] at $anonfun$withExecutionPhase$1 at AttributionContext.scala:349, JDBC v1 Relation from v2 scan, `pg_ventas`.`public`.`orders`, Statistics(sizeInBytes=8.0 EiB, ColumnStat: N/A)
+External engine query: SELECT "canal",COUNT(*) FROM "public"."orders"  WHERE ("fecha" IS NOT NULL) AND ("fecha" >= '2026-01-01') GROUP BY "canal"
+
+(2) PhotonRowToColumnar
+Input [2]: [canal#13500, count#13501L]
+
+(3) PhotonProject
+Input [2]: [canal#13500, count#13501L]
+Arguments: [canal#13500, count#13501L AS ordenes#13477L]
+
+(4) PhotonColumnarToRow
+Input [2]: [canal#13500, ordenes#13477L]
+
+(5) PhotonResultStage
+Input [2]: [canal#13500, ordenes#13477L]
+
+
+== Photon Explanation ==
+The query is fully supported by Photon.
