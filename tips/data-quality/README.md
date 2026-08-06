@@ -1,6 +1,6 @@
 # Lab — Databricks Tips #16: Data Quality
 
-Un pipeline de Lakeflow Declarative Pipelines con las reglas de calidad definidas **como datos** en una tabla Delta, el **Quarantine Pattern** oficial (columna `is_quarantined`, sin perder registros) y las métricas por regla consultadas del event log.
+Un pipeline de Lakeflow (Declarative Pipelines) con las reglas de calidad definidas **como datos** en una tabla Delta, el **Quarantine Pattern** oficial (columna `is_quarantined`, sin perder registros) y las métricas por regla consultadas del event log.
 
 Post: [Databricks Tips #16: Data Quality](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-16-data-quality/)
 
