@@ -1,0 +1,4 @@
+dataset                        expectation       pasan  fallan
+lab.dq.transacciones_marcadas  cliente_presente  95000    5000
+lab.dq.transacciones_marcadas  monto_positivo    96000    4000
+lab.dq.transacciones_marcadas  moneda_conocida   98000    2000

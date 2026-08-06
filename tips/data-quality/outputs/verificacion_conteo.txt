@@ -1,0 +1,2 @@
+bronze  silver  cuarentena
+100000   92000        8000
