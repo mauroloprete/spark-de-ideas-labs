@@ -28,6 +28,9 @@ Cada lab tiene su carpeta con notebooks que podés ejecutar en **Databricks Free
 | 8 | [Jobs & Workflows](tips/jobs-workflows/) | Jobs, triggers, streaming tasks, orchestration | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-08-jobs-workflows/) |
 | 12 | [Photon](tips/photon/) | Benchmark con/sin Photon — runtime_engine, query plans, wall-clock | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-12-photon/) |
 | 14 | [Liquid Clustering](tips/liquid-clustering/) | Benchmark de pruning: particionado vs Z-ORDER vs Liquid, files pruned/read | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-14-liquid-clustering/) |
+| 15 | [Query Federation](tips/query-federation/) | Foreign catalog sobre Postgres (Neon), pushdown verificado con EXPLAIN | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-15-query-federation/) |
+| 16 | [Data Quality](tips/data-quality/) | Reglas como datos, quarantine pattern y métricas del event log | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-16-data-quality/) |
+| 18 | [Lakehouse//RT](tips/lakehouse-rt/) | Benchmark de 3 series vs SQL Serverless: latencia, concurrencia 1-1000, result cache | [Blog](https://mauroloprete.github.io/mauroloprete/blog/posts/databricks-tips-18-lakehouse-rt/) |
 
 ## Databricks Asset Bundles
 
