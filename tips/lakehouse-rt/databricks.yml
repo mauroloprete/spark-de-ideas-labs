@@ -1,0 +1,62 @@
+bundle:
+  name: lakehouse-rt-lab
+
+sync:
+  include:
+    - "src/**"
+  exclude:
+    - "**/__pycache__"
+
+variables:
+  environment:
+    description: "Nombre del ambiente"
+    default: dev
+
+  catalog:
+    description: "Catalogo de Unity Catalog"
+    default: dev_bronze
+
+  schema:
+    description: "Schema para las tablas del lab"
+    default: lakehouse_rt_tips18
+
+  n_clientes:
+    description: "Cantidad de clientes sinteticos"
+    default: "200000"
+
+  n_pedidos:
+    description: "Cantidad de pedidos sinteticos (control de costo del setup)"
+    default: "20000000"
+
+resources:
+  jobs:
+    # Setup del dataset de serving: tablas MANAGED de UC (requisito de la Beta
+    # de Lakehouse//RT, que no soporta external ni formatos no Delta/Iceberg).
+    # Corre en serverless comun: el warehouse RT es solo-SELECT y no puede
+    # crear nada.
+    setup:
+      name: "[${var.environment}] lakehouse_rt_lab_setup"
+      environments:
+        - environment_key: default
+          spec:
+            client: "3"
+      tasks:
+        - task_key: setup
+          environment_key: default
+          notebook_task:
+            notebook_path: ./src/01_setup.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              n_clientes: ${var.n_clientes}
+              n_pedidos: ${var.n_pedidos}
+
+targets:
+  dev:
+    mode: development
+    default: true
+    presets:
+      tags:
+        environment: dev
+        lab: lakehouse-rt
